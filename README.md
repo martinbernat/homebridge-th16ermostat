@@ -2,7 +2,7 @@
 ## Homebridge plugin for Sonoff TH16/TH10
 
 This is a simple accessory plugin to control Sonoff TH16/TH10 with thermal probe (DS18B20) to a simple thermostat.
-Version 1.0.0 so use on you own risk and be patient. Planning to support at least one probe with humidity sensor (Sonoff AM2301) once it arrives from China.
+Version 0.0.2 so use on you own risk and be patient. Planning to support at least one probe with humidity sensor (Sonoff AM2301) once it arrives from China.
 
 # Prerequisities
 
