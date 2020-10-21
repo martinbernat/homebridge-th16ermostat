@@ -6,8 +6,7 @@ Version 1.0.0 so use on you own risk and be patient. Planning to support at leas
 
 # Prerequisities
 
-Tasmotized Sonoff TH16/TH10. For upgrading your Sonoff with Tasmota firmware please follow 
-https://templates.blakadder.com/sonoff_TH.html 
+Tasmotized Sonoff TH16/TH10. Google for "Sonoff TH16 Tasmota" if you still use original firmware (eWeLink app).
 
 # Installation
 
