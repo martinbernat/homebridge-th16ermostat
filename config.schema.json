@@ -1,11 +1,17 @@
 {
-"pluginAlias": "homebridge-th16ermostat",
+"pluginAlias": "TH16ermostat",
 "pluginType": "accessory",
 "headerDisplay": "Optional content to display ABOVE the plugin config. Supports markdown.",
 "footerDisplay": "Optional content to display BELOW the plugin config. Supports markdown.",
   "schema": {
     "type": "object",
     "properties": {
+        "name": {
+            "title": "Accessory Name",
+            "type": "string",
+            "required": true,
+            "placeholder": "Kitchen Infra Heater"
+        },
         "minTemp": {
             "title": "Minimum Temperature",
             "type": "number",
@@ -15,7 +21,7 @@
         "maxTemp": {
             "title": "Maximum Temperature",
             "type": "number",
-            "required": true,
+            "required": false,
             "placeholder": 24
         },
         "stepTemp": {
@@ -49,16 +55,16 @@
             "placeholder": "/cm?cmnd=power"
         },
         "deviceCmndOn": {
-            "title": "TH16 Power toggle HTTP location",
+            "title": "TH16 Power ON HTTP location",
             "type": "string",
             "required": false,
             "placeholder": "/cm?cmnd=power%20on"
         },
         "deviceCmndOff": {
-            "title": "TH16 Power toggle HTTP location",
+            "title": "TH16 Power OFF HTTP location",
             "type": "string",
             "required": false,
-            "placeholder": "/cm?cmnd=power%20onf"
+            "placeholder": "/cm?cmnd=power%20off"
         },
         "pollingInterval": {
             "title": "Time after we repeat the request for status of the device",

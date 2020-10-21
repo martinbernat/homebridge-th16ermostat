@@ -20,7 +20,7 @@ let hap: HAP;
  */
 export = (api: API) => {
   hap = api.hap;
-  api.registerAccessory('TH16ermostat', TH16ermostatPlugin);
+  api.registerAccessory('homebridge-th16ermostat', 'TH16ermostat', TH16ermostatPlugin);
 };
 
 class TH16ermostatPlugin implements AccessoryPlugin {
