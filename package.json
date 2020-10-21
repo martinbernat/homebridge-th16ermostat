@@ -1,0 +1,50 @@
+{
+  "private": true,
+  "displayName": "TH16ermostat",
+  "name": "homebridge-th16ermostat",
+  "version": "1.0.0",
+  "description": "Use Sonoff TH16 device as a simple thermostat.",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/bernat/th16ermostat.git"
+  },
+  "bugs": {
+    "url": "https://github.com/bernat/th16ermostat/issues"
+  },
+  "engines": {
+    "node": ">=10.17.0",
+    "homebridge": ">=1.0.0"
+  },
+  "main": "dist/index.js",
+  "scripts": {
+    "lint": "eslint src/**.ts --max-warnings=0",
+    "watch": "npm run build && npm link && nodemon",
+    "build": "rimraf ./dist && tsc",
+    "prepublishOnly": "npm run lint && npm run build"
+  },
+  "keywords": [
+    "homebridge-plugin",
+    "TH16 thermostat",
+    "sonoff thermostat",
+    "thermostat",
+    "sonoff",
+    "TH10",
+    "TH16"
+  ],
+  "dependencies": {
+    "request": "^2.88.2",
+    "request-promise-native": "^1.0.9"
+  },
+  "devDependencies": {
+    "@types/node": "^14.11.8",
+    "@typescript-eslint/eslint-plugin": "^4.4.1",
+    "@typescript-eslint/parser": "^4.4.1",
+    "eslint": "^7.11.0",
+    "homebridge": "^1.2.2",
+    "nodemon": "^2.0.5",
+    "rimraf": "^3.0.2",
+    "ts-node": "^9.0.0",
+    "typescript": "^4.0.3"
+  }
+}

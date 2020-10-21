@@ -1,0 +1,71 @@
+{
+"pluginAlias": "homebridge-th16ermostat",
+"pluginType": "accessory",
+"headerDisplay": "Optional content to display ABOVE the plugin config. Supports markdown.",
+"footerDisplay": "Optional content to display BELOW the plugin config. Supports markdown.",
+  "schema": {
+    "type": "object",
+    "properties": {
+        "minTemp": {
+            "title": "Minimum Temperature",
+            "type": "number",
+            "required": false,
+            "placeholder": 18
+        },
+        "maxTemp": {
+            "title": "Maximum Temperature",
+            "type": "number",
+            "required": true,
+            "placeholder": 24
+        },
+        "stepTemp": {
+            "title": "Step to increment/decrement the temperature in UI.",
+            "type": "number",
+            "required": false,
+            "placeholder": 0.5
+        },
+        "deltaTemp": {
+            "title": "Required difference between target and current temperature to switch relay state.",
+            "type": "number",
+            "required": false,
+            "placeholder": 0.2
+        },
+        "deviceIPAddress": {
+            "title": "TH16 IP Address",
+            "type": "string",
+            "required": true,
+            "placeholder": "192.168.1.1"
+        },
+        "deviceStatStatus": {
+            "title": "TH16 Status (including temperature) HTTP location",
+            "type": "string",
+            "required": false,
+            "placeholder": "/cm?cmnd=status%208"
+        },
+        "deviceStatPower": {
+            "title": "TH16 Power status HTTP location",
+            "type": "string",
+            "required": false,
+            "placeholder": "/cm?cmnd=power"
+        },
+        "deviceCmndOn": {
+            "title": "TH16 Power toggle HTTP location",
+            "type": "string",
+            "required": false,
+            "placeholder": "/cm?cmnd=power%20on"
+        },
+        "deviceCmndOff": {
+            "title": "TH16 Power toggle HTTP location",
+            "type": "string",
+            "required": false,
+            "placeholder": "/cm?cmnd=power%20onf"
+        },
+        "pollingInterval": {
+            "title": "Time after we repeat the request for status of the device",
+            "type": "number",
+            "required": false,
+            "placeholder": "60"
+        }    
+    }
+  }
+}
