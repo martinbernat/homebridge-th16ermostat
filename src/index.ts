@@ -236,16 +236,17 @@ class TH16ermostatPlugin implements AccessoryPlugin {
         self.isOffline = true;
       });
 
-    let targetRelayOn = false;
+    // init from current state
+    let targetRelayOn = (self.currentHeatingState === hap.Characteristic.CurrentHeatingCoolingState.HEAT);
 
     switch (self.targetHeatingState) {
       case hap.Characteristic.TargetHeatingCoolingState.AUTO:
         {
           // AUTO mode: Compare temperatures
-          if (this.currTemp < (this.targetTemp + this.deltaTemp)) {
-            targetRelayOn = true;
-          } else {
+          if (this.currTemp >= (this.targetTemp + this.deltaTemp)) {
             targetRelayOn = false;
+          } else if (this.currTemp <= (this.targetTemp - this.deltaTemp)) {
+            targetRelayOn = true;
           }
         }
         break;
@@ -263,7 +264,7 @@ class TH16ermostatPlugin implements AccessoryPlugin {
         break;
     }
 
-    // Change status if needed
+    // Change status if needed (self.currentHeatingState as boolean here)
     if (targetRelayOn && !self.currentHeatingState) {
       this.setDevicePower(hap.Characteristic.CurrentHeatingCoolingState.HEAT);
     } else if (!targetRelayOn && self.currentHeatingState) {
