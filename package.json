@@ -1,5 +1,5 @@
 {
-  "private": true,
+  "private": false,
   "displayName": "TH16ermostat",
   "name": "homebridge-th16ermostat",
   "version": "1.0.0",
