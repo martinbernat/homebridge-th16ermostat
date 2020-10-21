@@ -54,7 +54,7 @@ class TH16ermostatPlugin implements AccessoryPlugin {
   private informationService: Service;
 
   // ctor
-  constructor(log: Logging, config: AccessoryConfig, api: API) {
+  constructor(log: Logging, config: AccessoryConfig) {
 
     log.debug('TH16ermostat constructing!');
 
@@ -181,65 +181,63 @@ class TH16ermostatPlugin implements AccessoryPlugin {
   }
 
   setDevicePower(value: CharacteristicValue): void {
-    const self = this;
-    self.log.debug('[SET] device ON/OFF ... (' + value + ')');
+    this.log.debug('[SET] device ON/OFF ... (' + value + ')');
 
-    const url = 'http://' + self.deviceIPAddress;
+    const url = 'http://' + this.deviceIPAddress;
     const power = {
-      uri: url + (value === hap.Characteristic.CurrentHeatingCoolingState.HEAT ? self.deviceCmndOn : self.deviceCmndOff),
+      uri: url + (value === hap.Characteristic.CurrentHeatingCoolingState.HEAT ? this.deviceCmndOn : this.deviceCmndOff),
     };
 
     request.get(power).
       then((response) => {
-        self.currentHeatingState =
+        this.currentHeatingState =
           (JSON.parse(response).POWER === 'ON') ?
             hap.Characteristic.CurrentHeatingCoolingState.HEAT :
             hap.Characteristic.CurrentHeatingCoolingState.OFF;
       }).catch((err) => {
-        self.log.error('[SET] Error setting relay state on Sonoff TH @ ' + self.deviceIPAddress + self.deviceStatStatus + ' ... ' + err);
+        this.log.error('[SET] Error setting relay state on Sonoff TH @ ' + this.deviceIPAddress + this.deviceStatStatus + ' ... ' + err);
       });
   }
 
   pollDeviceStatus(): void {
-    const self = this;
 
-    const url = 'http://' + self.deviceIPAddress;
+    const url = 'http://' + this.deviceIPAddress;
     const status = {
       method: 'GET',
-      uri: url + self.deviceStatStatus,
+      uri: url + this.deviceStatStatus,
     };
     const power = {
       method: 'GET',
-      uri: url + self.deviceStatPower,
+      uri: url + this.deviceStatPower,
     };
 
-    self.isOffline = false;
+    this.isOffline = false;
 
     request.get(status)
       .then((response) => {
-        self.currTemp = parseFloat(JSON.parse(response).StatusSNS.DS18B20.Temperature);
-        self.thermostatService.setCharacteristic(hap.Characteristic.CurrentTemperature, self.currTemp);
+        this.currTemp = parseFloat(JSON.parse(response).StatusSNS.DS18B20.Temperature);
+        this.thermostatService.setCharacteristic(hap.Characteristic.CurrentTemperature, this.currTemp);
       }).catch((err) => {
-        self.log.info('Error getting status from Sonoff TH @ ' + self.deviceIPAddress + self.deviceStatStatus + ' ... ' + err);
-        self.thermostatService.setCharacteristic(hap.Characteristic.CurrentTemperature, '--');
-        self.isOffline = true;
+        this.log.info('Error getting status from Sonoff TH @ ' + this.deviceIPAddress + this.deviceStatStatus + ' ... ' + err);
+        this.thermostatService.setCharacteristic(hap.Characteristic.CurrentTemperature, '--');
+        this.isOffline = true;
       });
 
     request.get(power)
       .then((response) => {
-        self.currentHeatingState =
+        this.currentHeatingState =
           (JSON.parse(response).POWER === 'ON') ?
             hap.Characteristic.CurrentHeatingCoolingState.HEAT :
             hap.Characteristic.CurrentHeatingCoolingState.OFF;
       }).catch((err) => {
-        self.log.info('Error getting power status from Sonoff TH @ ' + self.deviceIPAddress + self.deviceStatStatus + ' ... ' + err);
-        self.isOffline = true;
+        this.log.info('Error getting power status from Sonoff TH @ ' + this.deviceIPAddress + this.deviceStatStatus + ' ... ' + err);
+        this.isOffline = true;
       });
 
     // init from current state
-    let targetRelayOn = (self.currentHeatingState === hap.Characteristic.CurrentHeatingCoolingState.HEAT);
+    let targetRelayOn = (this.currentHeatingState === hap.Characteristic.CurrentHeatingCoolingState.HEAT);
 
-    switch (self.targetHeatingState) {
+    switch (this.targetHeatingState) {
       case hap.Characteristic.TargetHeatingCoolingState.AUTO:
         {
           // AUTO mode: Compare temperatures
@@ -264,10 +262,10 @@ class TH16ermostatPlugin implements AccessoryPlugin {
         break;
     }
 
-    // Change status if needed (self.currentHeatingState as boolean here)
-    if (targetRelayOn && !self.currentHeatingState) {
+    // Change status if needed (this.currentHeatingState as boolean here)
+    if (targetRelayOn && !this.currentHeatingState) {
       this.setDevicePower(hap.Characteristic.CurrentHeatingCoolingState.HEAT);
-    } else if (!targetRelayOn && self.currentHeatingState) {
+    } else if (!targetRelayOn && this.currentHeatingState) {
       this.setDevicePower(hap.Characteristic.CurrentHeatingCoolingState.OFF);
     }
 
