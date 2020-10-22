@@ -1,7 +1,7 @@
 # TH16ermostat 
 ## Homebridge plugin for Sonoff TH16/TH10
 
-This is a simple accessory plugin to control Sonoff TH16/TH10 with thermal probe (DS18B20) to a simple thermostat.
+This is a simple accessory plugin to control Sonoff TH16/TH10 with thermal probe (DS18B20) like a thermostat.
 Version 0.0.2 so use on you own risk and be patient. Planning to support at least one probe with humidity sensor (Sonoff AM2301) once it arrives from China.
 
 # Prerequisities
@@ -18,6 +18,7 @@ Tasmotized Sonoff TH16/TH10. Google for "Sonoff TH16 Tasmota" if you still use o
 
 Add the following information to your config file in "accessories" section:
 Only required values are "name" and "deviceIPAddress". Values shown are used as default values.
+_Note: If if fails to start/initialize after installing and configuring through homebridge, check the config. It might have different accessory identifier, e.g. 'homebridge-th16ermostat' instead of 'TH16ermostat'. Also 'name' cannot be missing._
 
 ```
     "accessories": [

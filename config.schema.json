@@ -1,8 +1,6 @@
 {
 "pluginAlias": "TH16ermostat",
 "pluginType": "accessory",
-"headerDisplay": "Optional content to display ABOVE the plugin config. Supports markdown.",
-"footerDisplay": "Optional content to display BELOW the plugin config. Supports markdown.",
   "schema": {
     "type": "object",
     "properties": {

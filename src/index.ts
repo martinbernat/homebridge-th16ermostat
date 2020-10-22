@@ -11,7 +11,7 @@ import {
   Service,
 } from 'homebridge';
 
-import * as request from 'request-promise-native';
+import axios from 'axios';
 
 let hap: HAP;
 
@@ -63,7 +63,6 @@ class TH16ermostatPlugin implements AccessoryPlugin {
 
     // Config values
     this.deviceIPAddress = config.deviceIPAddress as string;
-    // with defaults
     this.deviceStatStatus = config.deviceStatStatus as string || this.deviceStatStatus;
     this.deviceStatPower = config.deviceStatPower as string || this.deviceStatPower;
     this.deviceCmndOn = config.deviceCmndOn as string || this.deviceCmndOn;
@@ -74,6 +73,8 @@ class TH16ermostatPlugin implements AccessoryPlugin {
     this.deltaTemp = config.deltaTemp as number || this.deltaTemp;
     this.stepTemp = config.StepTemp as number || this.stepTemp;
     this.tempUnits = config.tempUnits as string || this.tempUnits;
+    // init state values
+    this.targetTemp = this.minTemp;
 
     // create services
     this.thermostatService = new hap.Service.Thermostat(this.name);
@@ -99,19 +100,20 @@ class TH16ermostatPlugin implements AccessoryPlugin {
     // init Thermostat service
     this.thermostatService.getCharacteristic(hap.Characteristic.CurrentHeatingCoolingState)
       .on(CharacteristicEventTypes.GET, (callback: CharacteristicGetCallback) => {
-        this.log.info('Get CURRENT heating state: ' + this.heatingStateToStr(this.targetHeatingState));
-        callback(undefined, this.currentHeatingState);
+        this.log.info('Get CURRENT heating state: ' + this.heatingStateToStr(this.currentHeatingState));
+        callback(undefined, this.isOffline ? hap.Characteristic.CurrentHeatingCoolingState.OFF : this.currentHeatingState);
       })
       .on(CharacteristicEventTypes.SET, (value: CharacteristicValue, callback: CharacteristicSetCallback) => {
         this.currentHeatingState = value as number;
-        this.log.info('Set CURRENT heating state to: ' + this.heatingStateToStr(this.targetHeatingState));
+        this.log.info('Set CURRENT heating state to: ' + this.heatingStateToStr(this.currentHeatingState));
+        this.pollDeviceStatus();
         callback();
       });
 
     this.thermostatService.getCharacteristic(hap.Characteristic.TargetHeatingCoolingState)
       .on(CharacteristicEventTypes.GET, (callback: CharacteristicGetCallback) => {
         this.log.info('Get TARGET heating state: ' + this.heatingStateToStr(this.targetHeatingState));
-        callback(undefined, this.targetHeatingState);
+        callback(undefined, this.isOffline ? hap.Characteristic.TargetHeatingCoolingState.OFF : this.targetHeatingState);
       })
       .on(CharacteristicEventTypes.SET, (value: CharacteristicValue, callback: CharacteristicSetCallback) => {
         this.targetHeatingState = value as number;
@@ -130,14 +132,13 @@ class TH16ermostatPlugin implements AccessoryPlugin {
     this.thermostatService.getCharacteristic(hap.Characteristic.CurrentTemperature)
       .on(CharacteristicEventTypes.GET, (callback: CharacteristicGetCallback) => {
         this.log.info('Get CURRENT temperature: ' + this.currTemp);
-        this.pollDeviceStatus();
-        callback(undefined, this.currTemp);
+        callback(undefined, this.isOffline ? '--' : this.currTemp);
       });
 
     this.thermostatService.getCharacteristic(hap.Characteristic.TargetTemperature)
       .on(CharacteristicEventTypes.GET, (callback: CharacteristicGetCallback) => {
         this.log.info('Get TARGET temperature: ' + this.targetTemp);
-        callback(undefined, this.targetTemp);
+        callback(undefined, this.isOffline ? '--' : this.targetTemp);
       })
       .on(CharacteristicEventTypes.SET, (value: CharacteristicValue, callback: CharacteristicSetCallback) => {
         this.targetTemp = value as number;
@@ -181,96 +182,98 @@ class TH16ermostatPlugin implements AccessoryPlugin {
   }
 
   setDevicePower(value: CharacteristicValue): void {
-    this.log.debug('[SET] device ON/OFF ... (' + value + ')');
+
+    this.log.debug('[SET] device power ... (' + this.heatingStateToStr(value as number) + ')');
 
     const url = 'http://' + this.deviceIPAddress;
-    const power = {
-      uri: url + (value === hap.Characteristic.CurrentHeatingCoolingState.HEAT ? this.deviceCmndOn : this.deviceCmndOff),
-    };
 
-    request.get(power).
-      then((response) => {
+    axios.get(url + (value === hap.Characteristic.CurrentHeatingCoolingState.HEAT ? this.deviceCmndOn : this.deviceCmndOff))
+      .then((response) => {
         this.currentHeatingState =
-          (JSON.parse(response).POWER === 'ON') ?
+          (response.data.POWER === 'ON') ?
             hap.Characteristic.CurrentHeatingCoolingState.HEAT :
             hap.Characteristic.CurrentHeatingCoolingState.OFF;
       }).catch((err) => {
-        this.log.error('[SET] Error setting relay state on Sonoff TH @ ' + this.deviceIPAddress + this.deviceStatStatus + ' ... ' + err);
+        this.log.error('Failed to set relay state @ ' + this.deviceIPAddress + this.deviceStatStatus + ' [' + err + ']');
       });
   }
 
   pollDeviceStatus(): void {
-
     const url = 'http://' + this.deviceIPAddress;
-    const status = {
-      method: 'GET',
-      uri: url + this.deviceStatStatus,
-    };
-    const power = {
-      method: 'GET',
-      uri: url + this.deviceStatPower,
-    };
 
-    this.isOffline = false;
+    const deviceStatus =
+      async () => {
+        let tmp, pwr;
+        await axios.get(url + this.deviceStatStatus, { timeout: 3000 })
+          .then((response) => {
+            tmp = parseFloat(response.data.StatusSNS.DS18B20.Temperature);
+          }).catch((err) => {
+            throw new Error('Failed to get status @ ' + this.deviceIPAddress + this.deviceStatStatus + ' [' + err + ']');
+          });
 
-    request.get(status)
-      .then((response) => {
-        this.currTemp = parseFloat(JSON.parse(response).StatusSNS.DS18B20.Temperature);
-        this.thermostatService.setCharacteristic(hap.Characteristic.CurrentTemperature, this.currTemp);
-      }).catch((err) => {
-        this.log.info('Error getting status from Sonoff TH @ ' + this.deviceIPAddress + this.deviceStatStatus + ' ... ' + err);
-        this.thermostatService.setCharacteristic(hap.Characteristic.CurrentTemperature, '--');
-        this.isOffline = true;
-      });
+        await axios.get(url + this.deviceStatPower, { timeout: 3000 })
+          .then((response) => {
+            pwr =
+              (response.data.POWER === 'ON') ?
+                hap.Characteristic.CurrentHeatingCoolingState.HEAT :
+                hap.Characteristic.CurrentHeatingCoolingState.OFF;
+          }).catch((err) => {
+            throw new Error('Failed to get power status @ ' + this.deviceIPAddress + this.deviceStatStatus + ' [' + err + ']');
+          });
 
-    request.get(power)
-      .then((response) => {
-        this.currentHeatingState =
-          (JSON.parse(response).POWER === 'ON') ?
-            hap.Characteristic.CurrentHeatingCoolingState.HEAT :
-            hap.Characteristic.CurrentHeatingCoolingState.OFF;
-      }).catch((err) => {
-        this.log.info('Error getting power status from Sonoff TH @ ' + this.deviceIPAddress + this.deviceStatStatus + ' ... ' + err);
-        this.isOffline = true;
-      });
+        return await { 'temperature': tmp, 'power': pwr };
+      };
 
-    // init from current state
-    let targetRelayOn = (this.currentHeatingState === hap.Characteristic.CurrentHeatingCoolingState.HEAT);
+    deviceStatus()
+      .then((status) => {
 
-    switch (this.targetHeatingState) {
-      case hap.Characteristic.TargetHeatingCoolingState.AUTO:
-        {
-          // AUTO mode: Compare temperatures
-          if (this.currTemp >= (this.targetTemp + this.deltaTemp)) {
-            targetRelayOn = false;
-          } else if (this.currTemp <= (this.targetTemp - this.deltaTemp)) {
+        // device online
+        this.isOffline = false;
+
+        // state values
+        this.currTemp = status['temperature'];
+        this.currentHeatingState = status['power'];
+
+        // init target state from current state
+        let targetRelayOn = (this.currentHeatingState === hap.Characteristic.CurrentHeatingCoolingState.HEAT);
+
+        switch (this.targetHeatingState) {
+          case hap.Characteristic.TargetHeatingCoolingState.AUTO:
+            {
+              // AUTO mode: Compare temperatures
+              if (this.currTemp >= (this.targetTemp + this.deltaTemp)) {
+                targetRelayOn = false;
+              } else if (this.currTemp <= (this.targetTemp - this.deltaTemp)) {
+                targetRelayOn = true;
+              }
+            }
+            break;
+
+          case hap.Characteristic.CurrentHeatingCoolingState.HEAT:
             targetRelayOn = true;
-          }
+            break;
+
+          case hap.Characteristic.CurrentHeatingCoolingState.OFF:
+            targetRelayOn = false;
+            break;
         }
-        break;
 
-      case hap.Characteristic.CurrentHeatingCoolingState.HEAT:
-        {
-          targetRelayOn = true;
+        // Change status if needed (this.currentHeatingState as boolean here)
+        if (targetRelayOn && !this.currentHeatingState) {
+          this.setDevicePower(hap.Characteristic.CurrentHeatingCoolingState.HEAT);
+        } else if (!targetRelayOn && this.currentHeatingState) {
+          this.setDevicePower(hap.Characteristic.CurrentHeatingCoolingState.OFF);
         }
-        break;
 
-      case hap.Characteristic.CurrentHeatingCoolingState.OFF:
-        {
-          targetRelayOn = false;
-        }
-        break;
-    }
-
-    // Change status if needed (this.currentHeatingState as boolean here)
-    if (targetRelayOn && !this.currentHeatingState) {
-      this.setDevicePower(hap.Characteristic.CurrentHeatingCoolingState.HEAT);
-    } else if (!targetRelayOn && this.currentHeatingState) {
-      this.setDevicePower(hap.Characteristic.CurrentHeatingCoolingState.OFF);
-    }
-
+      })
+      .catch((err) => {
+        this.isOffline = true;
+        this.log.debug('Device offline or some error occurred: ' + err);
+      });
   }
 
+  // helpers
+  //
   heatingStateToStr(state: number): string {
     // assuming we have no 'COOL'!
     // assiming current and target to have the first 2 values identical!
@@ -285,5 +288,4 @@ class TH16ermostatPlugin implements AccessoryPlugin {
         return 'UNKNOWN';
     }
   }
-
 }
