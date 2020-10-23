@@ -28,7 +28,7 @@ class TH16ermostatPlugin implements AccessoryPlugin {
   private readonly log: Logging;
 
   // state
-  private currTemp = 0;
+  private currTemp = '';
   private targetTemp = 0;
   private currentHeatingState = hap.Characteristic.CurrentHeatingCoolingState.OFF; // [0, 1] only
   private targetHeatingState = hap.Characteristic.TargetHeatingCoolingState.OFF; // [0, 1, 3] only
@@ -132,13 +132,13 @@ class TH16ermostatPlugin implements AccessoryPlugin {
     this.thermostatService.getCharacteristic(hap.Characteristic.CurrentTemperature)
       .on(CharacteristicEventTypes.GET, (callback: CharacteristicGetCallback) => {
         this.log.info('Get CURRENT temperature: ' + this.currTemp);
-        callback(undefined, this.isOffline ? '--' : this.currTemp);
+        callback(undefined, this.currTemp);
       });
 
     this.thermostatService.getCharacteristic(hap.Characteristic.TargetTemperature)
       .on(CharacteristicEventTypes.GET, (callback: CharacteristicGetCallback) => {
         this.log.info('Get TARGET temperature: ' + this.targetTemp);
-        callback(undefined, this.isOffline ? '--' : this.targetTemp);
+        callback(undefined, this.targetTemp);
       })
       .on(CharacteristicEventTypes.SET, (value: CharacteristicValue, callback: CharacteristicSetCallback) => {
         this.targetTemp = value as number;
@@ -194,45 +194,46 @@ class TH16ermostatPlugin implements AccessoryPlugin {
             hap.Characteristic.CurrentHeatingCoolingState.HEAT :
             hap.Characteristic.CurrentHeatingCoolingState.OFF;
       }).catch((err) => {
-        this.log.error('Failed to set relay state @ ' + this.deviceIPAddress + this.deviceStatStatus + ' [' + err + ']');
+        this.log.error('Failed to set relay state: cmd=' + this.deviceStatStatus + ' [' + err + ']');
       });
   }
 
   pollDeviceStatus(): void {
-    const url = 'http://' + this.deviceIPAddress;
 
     const deviceStatus =
       async () => {
-        let tmp, pwr;
+        let pwr, tmp;
+        const url = 'http://' + this.deviceIPAddress;
+
         await axios.get(url + this.deviceStatStatus, { timeout: 3000 })
           .then((response) => {
             tmp = parseFloat(response.data.StatusSNS.DS18B20.Temperature);
           }).catch((err) => {
-            throw new Error('Failed to get status @ ' + this.deviceIPAddress + this.deviceStatStatus + ' [' + err + ']');
+            throw new Error('Failed to get status: cmd=' + this.deviceStatStatus + ' [' + err + ']');
           });
 
         await axios.get(url + this.deviceStatPower, { timeout: 3000 })
           .then((response) => {
-            pwr =
-              (response.data.POWER === 'ON') ?
-                hap.Characteristic.CurrentHeatingCoolingState.HEAT :
-                hap.Characteristic.CurrentHeatingCoolingState.OFF;
+            pwr = (response.data.POWER === 'ON') ?
+              hap.Characteristic.CurrentHeatingCoolingState.HEAT :
+              hap.Characteristic.CurrentHeatingCoolingState.OFF;
           }).catch((err) => {
-            throw new Error('Failed to get power status @ ' + this.deviceIPAddress + this.deviceStatStatus + ' [' + err + ']');
+            throw new Error('Failed to get power status: cmd=' + this.deviceStatPower + ' [' + err + ']');
           });
 
-        return await { 'temperature': tmp, 'power': pwr };
+        return { 'TMP_STAT': (await tmp), 'PWR_STAT': (await pwr) };
       };
 
     deviceStatus()
-      .then((status) => {
+      .then((response) => {
 
         // device online
         this.isOffline = false;
 
         // state values
-        this.currTemp = status['temperature'];
-        this.currentHeatingState = status['power'];
+        this.currTemp = response['TMP_STAT'] as string;
+        this.currentHeatingState = response['PWR_STAT'] as number;
+        this.thermostatService.setCharacteristic(hap.Characteristic.CurrentTemperature, this.currTemp);
 
         // init target state from current state
         let targetRelayOn = (this.currentHeatingState === hap.Characteristic.CurrentHeatingCoolingState.HEAT);
@@ -241,9 +242,9 @@ class TH16ermostatPlugin implements AccessoryPlugin {
           case hap.Characteristic.TargetHeatingCoolingState.AUTO:
             {
               // AUTO mode: Compare temperatures
-              if (this.currTemp >= (this.targetTemp + this.deltaTemp)) {
+              if (parseFloat(this.currTemp) >= (this.targetTemp + this.deltaTemp)) {
                 targetRelayOn = false;
-              } else if (this.currTemp <= (this.targetTemp - this.deltaTemp)) {
+              } else if (parseFloat(this.currTemp) <= (this.targetTemp - this.deltaTemp)) {
                 targetRelayOn = true;
               }
             }
@@ -267,8 +268,11 @@ class TH16ermostatPlugin implements AccessoryPlugin {
 
       })
       .catch((err) => {
+        // device offline
         this.isOffline = true;
-        this.log.debug('Device offline or some error occurred: ' + err);
+        this.currTemp = '--';
+        this.thermostatService.setCharacteristic(hap.Characteristic.CurrentTemperature, this.currTemp);
+        this.log.debug('Device offline? ' + err);
       });
   }
 
