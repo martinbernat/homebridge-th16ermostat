@@ -2,7 +2,7 @@
   "private": false,
   "displayName": "TH16ermostat",
   "name": "homebridge-th16ermostat",
-  "version": "0.0.5",
+  "version": "1.0.0",
   "description": "Use Sonoff TH16 device as a simple thermostat.",
   "license": "Apache-2.0",
   "repository": {
