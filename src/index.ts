@@ -166,7 +166,7 @@ class TH16ermostatPlugin implements AccessoryPlugin {
       .setCharacteristic(hap.Characteristic.Manufacturer, 'Sonoff')
       .setCharacteristic(hap.Characteristic.Model, 'TH16');
 
-    this.log.debug('Thermostat finished initializing!');
+    this.log.debug('TH16ermostat finished initializing!');
 
     // Polling service
     this.log.debug('Polling each ' + this.pollingInterval + ' seconds.');
@@ -183,7 +183,8 @@ class TH16ermostatPlugin implements AccessoryPlugin {
 
   setDevicePower(value: CharacteristicValue): void {
 
-    this.log.debug('[SET] device power ... (' + this.heatingStateToStr(value as number) + ')');
+    this.log.info('TH16ermostat: Power ' + this.heatingStateToStr(value as number) +
+      '(Temp: ' + this.currTemp + ' -> ' + this.targetTemp + ')');
 
     const url = 'http://' + this.deviceIPAddress;
 
@@ -268,11 +269,14 @@ class TH16ermostatPlugin implements AccessoryPlugin {
 
       })
       .catch((err) => {
-        // device offline
-        this.isOffline = true;
         this.currTemp = '--';
         this.thermostatService.setCharacteristic(hap.Characteristic.CurrentTemperature, this.currTemp);
-        this.log.debug('Device offline? ' + err);
+
+        // output error only once, do not spam the log on each poll
+        if (!this.isOffline) {
+          this.log.debug('Device offline? ' + err);
+          this.isOffline = true;
+        }
       });
   }
 
