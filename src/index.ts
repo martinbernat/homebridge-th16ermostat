@@ -37,6 +37,7 @@ class TH16ermostatPlugin implements AccessoryPlugin {
 
   // config
   private readonly name: string;
+  private readonly sensorName: string;
   private readonly minTemp: number = -25;
   private readonly maxTemp: number = 25;
   private readonly deltaTemp: number = 0.2;
@@ -62,6 +63,7 @@ class TH16ermostatPlugin implements AccessoryPlugin {
     this.name = config.name;
 
     // Config values
+    this.sensorName = config.sensorName as string;
     this.deviceIPAddress = config.deviceIPAddress as string;
     this.deviceStatStatus = config.deviceStatStatus as string || this.deviceStatStatus;
     this.deviceStatPower = config.deviceStatPower as string || this.deviceStatPower;
@@ -208,7 +210,7 @@ class TH16ermostatPlugin implements AccessoryPlugin {
 
         await axios.get(url + this.deviceStatStatus, { timeout: 3000 })
           .then((response) => {
-            tmp = parseFloat(response.data.StatusSNS.DS18B20.Temperature);
+            tmp = parseFloat(response.data.StatusSNS[this.sensorName].Temperature);
           }).catch((err) => {
             throw new Error('Failed to get status: cmd=' + this.deviceStatStatus + ' [' + err + ']');
           });
