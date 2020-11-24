@@ -2,7 +2,8 @@
 ## Homebridge plugin for Sonoff TH16/TH10
 
 This is a simple accessory plugin to control Sonoff TH16/TH10 with thermal probe (DS18B20, SI7021, others) like a thermostat.
-Use on you own risk and be patient. Planning to support at least one probe with humidity sensor (Sonoff AM2301) once it arrives from China.
+Humidity sensors are supported and can be enabled or disabled.
+Use on you own risk and be patient.
 
 # Prerequisities
 
@@ -26,6 +27,7 @@ _Note: If if fails to start/initialize after installing and configuring through 
             "accessory": "TH16ermostat",
             "name": "Kitchen Infra Heater",
             "sensorName": "DS18B20",
+            "enableHumidity": "boolean",
             "deviceIPAddress": "",
 
             "minTemp": -25,
@@ -45,7 +47,8 @@ _Note: If if fails to start/initialize after installing and configuring through 
 # Description of settings
 
 ```
-    "sensorName"        "TH16 (Tasmota) connected sensor name (check http://x.x.x.x/cm?cmnd=status%208)"
+    "sensorName"        "TH16 (Tasmota) connected sensor name (check http://x.x.x.x/cm?cmnd=status%208)",
+    "enableHumidity"    "You should disable this if thermal probe does not include humidity sensor.",
     "minTemp"           "Minimum Temperature allowed to set (shown in UI)",
     "maxTemp"           "Maximum Temperature allowed to set (shown in UI)",
     "stepTemp"          "Step to increment/decrement the temperature in UI.",
