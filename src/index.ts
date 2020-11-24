@@ -69,7 +69,7 @@ class TH16ermostatPlugin implements AccessoryPlugin {
     // Config values
     this.sensorName = config.sensorName as string;
     this.deviceIPAddress = config.deviceIPAddress as string;
-    this.enableHumidity = config.separateHumidity as boolean;
+    this.enableHumidity = config.enableHumidity as boolean;
     this.deviceStatStatus = config.deviceStatStatus as string || this.deviceStatStatus;
     this.deviceStatPower = config.deviceStatPower as string || this.deviceStatPower;
     this.deviceCmndOn = config.deviceCmndOn as string || this.deviceCmndOn;
