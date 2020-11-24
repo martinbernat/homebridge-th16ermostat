@@ -16,6 +16,11 @@
             "required": true,
             "placeholder": "DS18B20"
         },
+        "enableHumidity": {
+            "title": "Enable humidity sensor if available on the sensor.",
+            "type": "boolean",
+            "default": true
+        },
         "minTemp": {
             "title": "Minimum Temperature",
             "type": "number",
