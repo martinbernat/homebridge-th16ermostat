@@ -10,6 +10,12 @@
             "required": true,
             "placeholder": "Kitchen Infra Heater"
         },
+        "sensorName": {
+            "title": "Temperature sensor name/type",
+            "type": "string",
+            "required": true,
+            "placeholder": "DS18B20"
+        },
         "minTemp": {
             "title": "Minimum Temperature",
             "type": "number",
