@@ -30,6 +30,7 @@ class TH16ermostatPlugin implements AccessoryPlugin {
   // state
   private currTemp = '';
   private targetTemp = 0;
+  private currRelativeHumidity = '';
   private currentHeatingState = hap.Characteristic.CurrentHeatingCoolingState.OFF; // [0, 1] only
   private targetHeatingState = hap.Characteristic.TargetHeatingCoolingState.OFF; // [0, 1, 3] only
   private pollingTimer;
@@ -37,6 +38,8 @@ class TH16ermostatPlugin implements AccessoryPlugin {
 
   // config
   private readonly name: string;
+  private readonly sensorName: string;
+  private readonly enableHumidity: boolean;
   private readonly minTemp: number = -25;
   private readonly maxTemp: number = 25;
   private readonly deltaTemp: number = 0.2;
@@ -52,6 +55,8 @@ class TH16ermostatPlugin implements AccessoryPlugin {
   // services
   private thermostatService: Service;
   private informationService: Service;
+  private humidityService: Service;
+  private servicesArray: Array<Service>;
 
   // ctor
   constructor(log: Logging, config: AccessoryConfig) {
@@ -62,7 +67,9 @@ class TH16ermostatPlugin implements AccessoryPlugin {
     this.name = config.name;
 
     // Config values
+    this.sensorName = config.sensorName as string;
     this.deviceIPAddress = config.deviceIPAddress as string;
+    this.enableHumidity = config.enableHumidity as boolean;
     this.deviceStatStatus = config.deviceStatStatus as string || this.deviceStatStatus;
     this.deviceStatPower = config.deviceStatPower as string || this.deviceStatPower;
     this.deviceCmndOn = config.deviceCmndOn as string || this.deviceCmndOn;
@@ -79,6 +86,8 @@ class TH16ermostatPlugin implements AccessoryPlugin {
     // create services
     this.thermostatService = new hap.Service.Thermostat(this.name);
     this.informationService = new hap.Service.AccessoryInformation();
+    this.humidityService = new hap.Service.HumiditySensor(this.name);
+    this.servicesArray = [];
   }
 
   /*
@@ -96,6 +105,15 @@ class TH16ermostatPlugin implements AccessoryPlugin {
   getServices(): Service[] {
 
     this.log.debug('TH16ermostat initializing!');
+
+    // init Humidity Sensor service
+    if (this.enableHumidity) {
+      this.humidityService.getCharacteristic(hap.Characteristic.CurrentRelativeHumidity)
+        .on(CharacteristicEventTypes.GET, (callback: CharacteristicGetCallback) => {
+          this.log.info('Get CURRENT relative humidity: ' + this.currRelativeHumidity);
+          callback(undefined, this.currRelativeHumidity);
+        });
+    }
 
     // init Thermostat service
     this.thermostatService.getCharacteristic(hap.Characteristic.CurrentHeatingCoolingState)
@@ -175,10 +193,14 @@ class TH16ermostatPlugin implements AccessoryPlugin {
     // Get initial state
     this.pollDeviceStatus();
 
-    return [
+    this.servicesArray = [
       this.informationService,
-      this.thermostatService,
-    ];
+      this.thermostatService
+    ]
+    if (this.enableHumidity)
+      this.servicesArray.push(this.humidityService)
+
+    return this.servicesArray;
   }
 
   setDevicePower(value: CharacteristicValue): void {
@@ -203,12 +225,19 @@ class TH16ermostatPlugin implements AccessoryPlugin {
 
     const deviceStatus =
       async () => {
-        let pwr, tmp;
+        let pwr, tmp, hum;
         const url = 'http://' + this.deviceIPAddress;
 
         await axios.get(url + this.deviceStatStatus, { timeout: 3000 })
           .then((response) => {
-            tmp = parseFloat(response.data.StatusSNS.DS18B20.Temperature);
+            tmp = parseFloat(response.data.StatusSNS[this.sensorName].Temperature);
+          }).catch((err) => {
+            throw new Error('Failed to get status: cmd=' + this.deviceStatStatus + ' [' + err + ']');
+          });
+
+        await axios.get(url + this.deviceStatStatus, { timeout: 3000 })
+          .then((response) => {
+            hum = parseFloat(response.data.StatusSNS[this.sensorName].Humidity);
           }).catch((err) => {
             throw new Error('Failed to get status: cmd=' + this.deviceStatStatus + ' [' + err + ']');
           });
@@ -222,7 +251,7 @@ class TH16ermostatPlugin implements AccessoryPlugin {
             throw new Error('Failed to get power status: cmd=' + this.deviceStatPower + ' [' + err + ']');
           });
 
-        return { 'TMP_STAT': (await tmp), 'PWR_STAT': (await pwr) };
+        return { 'TMP_STAT': (await tmp), 'HUM_STAT': (await hum), 'PWR_STAT': (await pwr) };
       };
 
     deviceStatus()
@@ -233,8 +262,11 @@ class TH16ermostatPlugin implements AccessoryPlugin {
 
         // state values
         this.currTemp = response['TMP_STAT'] as string;
+        this.currRelativeHumidity = response['HUM_STAT'] as string;
         this.currentHeatingState = response['PWR_STAT'] as number;
         this.thermostatService.setCharacteristic(hap.Characteristic.CurrentTemperature, this.currTemp);
+        if(this.enableHumidity)
+          this.humidityService.setCharacteristic(hap.Characteristic.CurrentRelativeHumidity, this.currRelativeHumidity);
 
         // init target state from current state
         let targetRelayOn = (this.currentHeatingState === hap.Characteristic.CurrentHeatingCoolingState.HEAT);
@@ -271,6 +303,9 @@ class TH16ermostatPlugin implements AccessoryPlugin {
       .catch((err) => {
         this.currTemp = '--';
         this.thermostatService.setCharacteristic(hap.Characteristic.CurrentTemperature, this.currTemp);
+        this.currRelativeHumidity = "--";
+        if (this.enableHumidity)
+          this.humidityService.setCharacteristic(hap.Characteristic.CurrentRelativeHumidity, this.currRelativeHumidity);
 
         // output error only once, do not spam the log on each poll
         if (!this.isOffline) {
