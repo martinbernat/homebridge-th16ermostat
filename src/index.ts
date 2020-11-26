@@ -39,7 +39,7 @@ class TH16ermostatPlugin implements AccessoryPlugin {
   // config
   private readonly name: string;
   private readonly sensorName: string;
-  private readonly enableHumidity: boolean;
+  private readonly enableHumidity: boolean = false;
   private readonly minTemp: number = -25;
   private readonly maxTemp: number = 25;
   private readonly deltaTemp: number = 0.2;
@@ -69,7 +69,7 @@ class TH16ermostatPlugin implements AccessoryPlugin {
     // Config values
     this.sensorName = config.sensorName as string;
     this.deviceIPAddress = config.deviceIPAddress as string;
-    this.enableHumidity = config.enableHumidity as boolean;
+    this.enableHumidity = config.enableHumidity as boolean || this.enableHumidity;
     this.deviceStatStatus = config.deviceStatStatus as string || this.deviceStatStatus;
     this.deviceStatPower = config.deviceStatPower as string || this.deviceStatPower;
     this.deviceCmndOn = config.deviceCmndOn as string || this.deviceCmndOn;
@@ -195,10 +195,11 @@ class TH16ermostatPlugin implements AccessoryPlugin {
 
     this.servicesArray = [
       this.informationService,
-      this.thermostatService
-    ]
-    if (this.enableHumidity)
-      this.servicesArray.push(this.humidityService)
+      this.thermostatService,
+    ];
+    if (this.enableHumidity) {
+      this.servicesArray.push(this.humidityService);
+    }
 
     return this.servicesArray;
   }
@@ -265,8 +266,9 @@ class TH16ermostatPlugin implements AccessoryPlugin {
         this.currRelativeHumidity = response['HUM_STAT'] as string;
         this.currentHeatingState = response['PWR_STAT'] as number;
         this.thermostatService.setCharacteristic(hap.Characteristic.CurrentTemperature, this.currTemp);
-        if(this.enableHumidity)
+        if (this.enableHumidity) {
           this.humidityService.setCharacteristic(hap.Characteristic.CurrentRelativeHumidity, this.currRelativeHumidity);
+        }
 
         // init target state from current state
         let targetRelayOn = (this.currentHeatingState === hap.Characteristic.CurrentHeatingCoolingState.HEAT);
@@ -303,9 +305,10 @@ class TH16ermostatPlugin implements AccessoryPlugin {
       .catch((err) => {
         this.currTemp = '--';
         this.thermostatService.setCharacteristic(hap.Characteristic.CurrentTemperature, this.currTemp);
-        this.currRelativeHumidity = "--";
-        if (this.enableHumidity)
+        this.currRelativeHumidity = '--';
+        if (this.enableHumidity) {
           this.humidityService.setCharacteristic(hap.Characteristic.CurrentRelativeHumidity, this.currRelativeHumidity);
+        }
 
         // output error only once, do not spam the log on each poll
         if (!this.isOffline) {
