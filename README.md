@@ -19,7 +19,8 @@ Tasmotized Sonoff TH16/TH10. Google for "Sonoff TH16 Tasmota" if you still use o
 
 Add the following information to your config file in "accessories" section:
 Only required values are "name" and "deviceIPAddress". Values shown are used as default values.
-_Note: If if fails to start/initialize after installing and configuring through homebridge, check the config. It might have different accessory identifier, e.g. 'homebridge-th16ermostat' instead of 'TH16ermostat'. Also 'name' cannot be missing._
+
+_Note: If if fails to start/initialize after installing and configuring through homebridge, check the config. It might have different accessory identifier, e.g. 'homebridge-th16ermostat' instead of 'TH16ermostat'. Also 'name' and 'sensorName' cannot be missing. As 'sensorName' use the name of your probe you see in the output of http://x.x.x.x/cm?cmnd=status%208, for example 'DS18B20' (put your Tasmota IP address instead of x.x.x.x)_
 
 ```
     "accessories": [
