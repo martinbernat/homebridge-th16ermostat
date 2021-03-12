@@ -80,6 +80,13 @@ class TH16ermostatPlugin implements AccessoryPlugin {
     this.deltaTemp = config.deltaTemp as number || this.deltaTemp;
     this.stepTemp = config.StepTemp as number || this.stepTemp;
     this.tempUnits = config.tempUnits as string || this.tempUnits;
+    // Fix config values if necessary
+    //
+    if (this.deltaTemp < 0.1) {
+      // prevent zero or negavite (minimum of 0.1)
+      this.deltaTemp = 0.1;
+    }
+    
     // init state values
     this.targetTemp = this.minTemp;
 
